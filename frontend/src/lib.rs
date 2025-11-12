@@ -1,11 +1,21 @@
-use std::cell::RefCell;
+use serde::Deserialize;
+use std::panic;
 use std::rc::Rc;
+use std::{cell::RefCell, option};
+use wasm_bindgen_futures::JsFuture;
 
-use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen::from_value;
+use wasm_bindgen::{JsCast, JsValue, prelude::*};
 use web_sys::{
     CanvasRenderingContext2d, Document, Event, HtmlButtonElement, HtmlCanvasElement,
-    HtmlParagraphElement, MouseEvent, window,
+    HtmlParagraphElement, MouseEvent, Request, RequestInit, RequestMode, Response, Window, console,
+    window,
 };
+
+#[derive(Deserialize)]
+struct Model {
+    weights: Vec<u8>,
+}
 
 fn draw(document: &Document) {
     let canvas = document
@@ -133,11 +143,9 @@ fn draw(document: &Document) {
                 .map(|b| b.to_string())
                 .collect::<Vec<_>>()
                 .join(" ");
-
             string_of_greyscale_data
                 .push_str(format!(" Size: {}", greyscale_values.len().to_string()).as_str());
-
-            data_dump.set_text_content(Some(&string_of_greyscale_data));
+            console::log_1(&string_of_greyscale_data.into());
         }) as Box<dyn FnMut(Event)>);
 
         save_and_next_button
@@ -148,12 +156,30 @@ fn draw(document: &Document) {
     }
 }
 
+async fn get_latest_model_from_server(window: &Window) -> Result<Model, JsValue> {
+    let options = RequestInit::new();
+    options.set_method("GET");
+    options.set_mode(RequestMode::Cors);
+
+    let request = Request::new_with_str_and_init("/api/latest_model", &options)?;
+
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+    let resp: Response = resp_value.dyn_into()?;
+
+    let json = JsFuture::from(resp.json()?).await?;
+    let result: Model = from_value(json)?;
+    Ok(result)
+}
+
 // Test rust-js interop
 #[wasm_bindgen]
 pub fn rust_main_entry() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
     let window = window().expect("no global `window` exists");
 
     let document: Document = window.document().expect("Should have a document");
+
+    let model = get_latest_model_from_server(&window);
 
     draw(&document);
 }
