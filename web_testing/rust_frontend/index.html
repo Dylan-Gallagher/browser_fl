@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Rust WASM Example</title>
+        <style>
+            canvas {
+                border: 1px solid black;
+                image-rendering: pixelated;
+                cursor: crosshair;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="28" height="28"> Drawing canvas </canvas>
+        <button id="save_and_next_button">Save & Next</button>
+        <button id="reset_button">Reset</button>
+        <button id="federate">Federate</button>
+        <p id="data_dump">Hello</p>
+        <script type="module" src="run.js"></script>
+    </body>
+</html>
